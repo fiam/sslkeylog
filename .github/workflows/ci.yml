@@ -2,32 +2,55 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+env:
+  GO_VERSION: '1.25'
+  GOLANG_CI_LINT_VERSION: '2.4.0'
 
 jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Build
+        run: go build -v ./...
+
   test:
     name: Test
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-go@v4
-      with:
-        go-version: '1.25'
-        cache: true
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: Test
+        run: go test -v -race -coverprofile=coverage.out ./...
+      - name: Print coverage
+        run: go tool cover -func=coverage.out
 
-    - name: Build
-      run: go build -v ./...
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
 
-    - name: Test
-      run: go test -v -race -coverprofile=coverage.out ./...
-
-    - name: Print coverage
-      run: go tool cover -func=coverage.out
-
-    - name: Lint
-      uses: golangci/golangci-lint-action@v3
-      with:
-        version: latest
-        args: --timeout=5m
+      - name: Lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v${{ env.GOLANG_CI_LINT_VERSION }}
+          args: --timeout=5m
